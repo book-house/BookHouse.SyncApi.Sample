@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -22,14 +23,20 @@ namespace WinFormSample
             InitializeComponent();
 
 
+
             logTextbox.ReadOnly = true;
-
-
             getRequestButton.Click += async (s, e) => await getRequestButton_Click(s, e);
 
             postRequestButton.Click += async (s, e) => await postRequestButton_Click(s, e);
 
             checkApiKeyButton.Click += async (s, e) => await checkApiKeyButton_Click(s, e);
+
+
+            _client = new BookHouseClient(appTokenTextBox.Text, sellerTokenTextBox.Text, apiAddressTextBox.Text);
+            _client.ProgressChanged += (s, e) =>
+            {
+                LoggToText(e);
+            };
 
         }
 
@@ -39,13 +46,16 @@ namespace WinFormSample
                 _client = new BookHouseClient(appTokenTextBox.Text, sellerTokenTextBox.Text, apiAddressTextBox.Text);
             else
             {
-                _client.UpdateCredential(appTokenTextBox.Text, sellerTokenTextBox.Text);
+                if (!_client.IsBusy())
+                {
+                    _client.UpdateCredential(appTokenTextBox.Text, sellerTokenTextBox.Text);
+                }
             }
 
             var res = await _client.GetOnlineOrders(DateTime.Now);
 
-            logTextbox.Text = res.StoreTitle + "\r\n" + res.StartDateTime.ToString() + "\r\n" + res.Books.Count();
-            logTextbox.Text += "\r\n \r\n" + JsonSerializer.Serialize(res);
+            LoggToText(res.StoreTitle + " - " + res.StartDateTime.ToString() + " - " + res.Books.Count());
+            LoggToText(JsonSerializer.Serialize(res));
 
         }
 
@@ -55,6 +65,8 @@ namespace WinFormSample
                 _client = new BookHouseClient(appTokenTextBox.Text, sellerTokenTextBox.Text, apiAddressTextBox.Text);
             else
             {
+                if (_client.IsBusy())
+                    return;
                 _client.UpdateCredential(appTokenTextBox.Text, sellerTokenTextBox.Text);
             }
 
@@ -81,16 +93,17 @@ namespace WinFormSample
                 },
             };
 
+            //Sample Data From File
+            //var books = JsonSerializer.Deserialize<List<Book>>(File.ReadAllText("data.json"));
+
 
             try
             {
                 var res = await _client.ImportBooks(books);
-
-                logTextbox.Text = JsonSerializer.Serialize(res);
             }
             catch (Exception ex)
             {
-                logTextbox.Text = "خطا در آپدیت موجودی ها";
+                LoggToText(ex.Message);
             }
         }
 
@@ -101,17 +114,24 @@ namespace WinFormSample
                 _client = new BookHouseClient(appTokenTextBox.Text, sellerTokenTextBox.Text, apiAddressTextBox.Text);
             else
             {
-                _client.UpdateCredential(appTokenTextBox.Text, sellerTokenTextBox.Text);
+                if (!_client.IsBusy())
+                {
+                    _client.UpdateCredential(appTokenTextBox.Text, sellerTokenTextBox.Text);
+                }
             }
-            logTextbox.AppendText("در حال بررسی ارتباط");
-            logTextbox.AppendText("\r\n");
+            LoggToText("در حال بررسی ارتباط");
 
             var res = await _client.CheckApiKey();
 
-            logTextbox.AppendText($"{res.Title} - {res.Description}");
+            LoggToText($"{res.Title} - {res.Description}");
+
+
+        }
+
+        private void LoggToText(string text)
+        {
+            logTextbox.AppendText($"{DateTime.Now}:: {text}");
             logTextbox.AppendText("\r\n");
-
-
         }
     }
 }
