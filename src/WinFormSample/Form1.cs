@@ -65,9 +65,10 @@ namespace WinFormSample
                 _client = new BookHouseClient(appTokenTextBox.Text, sellerTokenTextBox.Text, apiAddressTextBox.Text);
             else
             {
-                if (_client.IsBusy())
-                    return;
-                _client.UpdateCredential(appTokenTextBox.Text, sellerTokenTextBox.Text);
+                if (!_client.IsBusy())
+                {
+                    _client.UpdateCredential(appTokenTextBox.Text, sellerTokenTextBox.Text);
+                }
             }
 
             //Sample Data
